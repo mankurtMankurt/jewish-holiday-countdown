@@ -16,15 +16,16 @@
         :root {
             --primary-color: #3498db;
             --secondary-color: #f39c12;
-            --background-color: #ecf0f1;
+            --background-color: #e6f3ff;
             --text-color: #2c3e50;
         }
         body {
             font-family: 'Arial', sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: var(--background-color);
             color: var(--text-color);
@@ -38,11 +39,6 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             max-width: 80%;
             width: 400px;
-        }
-        h1 {
-            font-size: 1.5em;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
         }
         #holidayName {
             font-size: 2.5em;
@@ -65,32 +61,73 @@
             font-size: 1.2em;
             margin-bottom: 1rem;
         }
+        #upcomingHolidays {
+            display: flex;
+            justify-content: flex-start;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 80%;
+            width: 400px;
+            margin-top: 1rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .holiday-item {
+            flex: 0 0 auto;
+            text-align: center;
+            font-size: 0.9em;
+            margin-right: 1rem;
+            width: 100px;
+        }
+        .holiday-item-emoji {
+            font-size: 2em;
+            margin-bottom: 0.5rem;
+        }
+        .holiday-item-name {
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+        }
+        .holiday-item-date {
+            font-size: 0.8em;
+            margin-bottom: 0.2rem;
+        }
+        .holiday-item-countdown {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
         @media (max-width: 480px) {
-            #app { padding: 1rem; width: 90%; }
+            #app, #upcomingHolidays { 
+                padding: 1rem;
+                width: 90%; 
+            }
             #holidayName { font-size: 2em; }
             #holidayEmoji { font-size: 3em; }
             #countdown { font-size: 2em; }
+            .holiday-item { font-size: 0.8em; }
         }
     </style>
 </head>
 <body>
     <div id="app">
-        <h1>When is the Next Jewish Holiday?</h1>
         <div id="holidayEmoji"></div>
         <div id="holidayName"></div>
         <div id="countdown"></div>
         <div id="holidayDate"></div>
     </div>
+    <div id="upcomingHolidays"></div>
 
     <script>
         const holidays = [
             { name: "Rosh Hashanah", date: "2024-10-02T18:00:00", emoji: "🍎", theme: { primary: "#c0392b", secondary: "#e74c3c", background: "#fadbd8" } },
-            { name: "Yom Kippur", date: "2024-10-11T18:00:00", emoji: "📿", theme: { primary: "#2c3e50", secondary: "#34495e", background: "#eaecee" } },
+            { name: "Yom Kippur", date: "2024-10-11T18:00:00", emoji: "🙏", theme: { primary: "#2c3e50", secondary: "#34495e", background: "#eaecee" } },
             { name: "Sukkot", date: "2024-10-16T18:00:00", emoji: "🌿", theme: { primary: "#27ae60", secondary: "#2ecc71", background: "#e9f7ef" } },
             { name: "Hanukkah", date: "2024-12-25T18:00:00", emoji: "🕎", theme: { primary: "#2980b9", secondary: "#3498db", background: "#ebf5fb" } },
             { name: "Purim", date: "2025-03-14T18:00:00", emoji: "🎭", theme: { primary: "#8e44ad", secondary: "#9b59b6", background: "#f4ecf7" } },
@@ -98,13 +135,16 @@
             { name: "Shavuot", date: "2025-06-01T18:00:00", emoji: "📜", theme: { primary: "#16a085", secondary: "#1abc9c", background: "#e8f8f5" } }
         ];
 
-        function getNextHoliday() {
+        function getNextHolidays() {
             const now = moment();
-            return holidays.find(holiday => moment(holiday.date) > now) || holidays[0];
+            return holidays
+                .filter(holiday => moment(holiday.date) > now)
+                .sort((a, b) => moment(a.date) - moment(b.date));
         }
 
         function updateCountdown() {
-            const nextHoliday = getNextHoliday();
+            const nextHolidays = getNextHolidays();
+            const nextHoliday = nextHolidays[0];
             const now = moment();
             const holidayDate = moment(nextHoliday.date);
             const daysRemaining = holidayDate.diff(now, 'days');
@@ -117,7 +157,21 @@
             // Update theme
             document.documentElement.style.setProperty('--primary-color', nextHoliday.theme.primary);
             document.documentElement.style.setProperty('--secondary-color', nextHoliday.theme.secondary);
-            document.documentElement.style.setProperty('--background-color', nextHoliday.theme.background);
+
+            // Update upcoming holidays bar
+            const upcomingHolidaysHtml = nextHolidays.slice(1).map(holiday => {
+                const holidayDate = moment(holiday.date);
+                const daysUntil = holidayDate.diff(now, 'days');
+                return `
+                    <div class="holiday-item">
+                        <div class="holiday-item-emoji">${holiday.emoji}</div>
+                        <div class="holiday-item-name">${holiday.name}</div>
+                        <div class="holiday-item-date">${holidayDate.format('MMM D')}</div>
+                        <div class="holiday-item-countdown">${daysUntil} day${daysUntil !== 1 ? 's' : ''}</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('upcomingHolidays').innerHTML = upcomingHolidaysHtml;
 
             // Update structured data
             updateStructuredData(nextHoliday, holidayDate, daysRemaining);
@@ -147,6 +201,30 @@
 
         updateCountdown();
         setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
+
+        // Simple swipe detection
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const upcomingHolidays = document.getElementById('upcomingHolidays');
+
+        upcomingHolidays.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, false);
+
+        upcomingHolidays.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, false);
+
+        function handleSwipe() {
+            if (touchStartX - touchEndX > 50) {
+                // Swipe left
+                upcomingHolidays.scrollBy({ left: 100, behavior: 'smooth' });
+            } else if (touchEndX - touchStartX > 50) {
+                // Swipe right
+                upcomingHolidays.scrollBy({ left: -100, behavior: 'smooth' });
+            }
+        }
     </script>
 </body>
 </html>
